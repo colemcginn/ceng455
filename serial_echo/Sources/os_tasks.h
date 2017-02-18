@@ -20,11 +20,11 @@
 ** @brief
 **         This is user's event module.
 **         Put your event handler code here.
-*/         
+*/
 /*!
 **  @addtogroup os_tasks_module os_tasks module documentation
 **  @{
-*/         
+*/
 
 #ifndef __os_tasks_H
 #define __os_tasks_H
@@ -44,7 +44,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 /*
 ** ===================================================================
@@ -56,17 +56,23 @@ extern "C" {
 ** ===================================================================
 */
 void serial_task(os_task_param_t task_init_data);
-typedef void   *_pool_id;
+typedef void   *_pool_id; // TODO is this supposed to be here?
 extern _pool_id message_pool;
 
+#define SERIAL_QUEUE 8
+
+typedef struct serial_message {
+	MESSAGE_HEADER_STRUCT HEADER;
+	unsigned char DATA[1];
+} SERIAL_MESSAGE, *SERIAL_MESSAGE_PTR;
 
 /* END os_tasks */
 
 #ifdef __cplusplus
 }  /* extern "C" */
-#endif 
+#endif
 
-#endif 
+#endif
 /* ifndef __os_tasks_H*/
 /*!
 ** @}

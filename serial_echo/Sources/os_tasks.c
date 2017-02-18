@@ -34,19 +34,12 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 /* User includes (#include below this line is not maintained by Processor Expert) */
 #include "message.h"
 
-#define SERIAL_QUEUE 8
-
-typedef struct serial_message {
-	MESSAGE_HEADER_STRUCT HEADER;
-	unsigned char DATA[1];
-} SERIAL_MESSAGE, *SERIAL_MESSAGE_PTR;
-
-_pool_id   message_pool;
+_pool_id message_pool;
 
 /*
  ** ===================================================================
@@ -58,7 +51,6 @@ _pool_id   message_pool;
  ** ===================================================================
  */
 void serial_task(os_task_param_t task_init_data) {
-	/* Write your local variable definition here */
 	printf("serialTask Created\n\r");
 
 	char buf[13];
@@ -66,23 +58,18 @@ void serial_task(os_task_param_t task_init_data) {
 	UART_DRV_SendDataBlocking(myUART_IDX, buf, sizeof(buf), 1000);
 
 	SERIAL_MESSAGE_PTR msg_ptr;
-	_mqx_uint i;
 	_queue_id serial_qid;
 	bool result;
 
-	/* open a message queue */
+	// Open a message queue.   _msgq_open(queue_num, max_size);
 	serial_qid = _msgq_open(SERIAL_QUEUE, 0);
-
 	if (serial_qid == 0) {
 		printf("\nCould not open the system message queue\n");
 		_task_block();
 	}
 
-	/* create a message pool */
+	// Create a message pool.   _msgpool_create(msg_size, num_msg, grow_size, grow_lim);
 	message_pool = _msgpool_create(sizeof(SERIAL_MESSAGE), 7, 0, 0);
-
-	_task_get_error();
-
 	if (message_pool == MSGPOOL_NULL_POOL_ID) {
 		printf("\nCount not create a message pool\n");
 		_task_block();
@@ -91,15 +78,10 @@ void serial_task(os_task_param_t task_init_data) {
 #ifdef PEX_USE_RTOS
 	while (1) {
 #endif
-		// Write handler to constantly read message queue and handle messages
-//		printf("\n while loop\n");
-//		OSA_TimeDelay(10); /* Example code (for task release) */
+		// Handler: Constantly read message queue and handle messages.
 
-
-		// Check queue repeatedly
-		msg_ptr = _msgq_receive(serial_qid,0);
-
-//		printf("\n receiving message\n");
+		// Check queue
+		msg_ptr = _msgq_receive(serial_qid, 0);
 		if (msg_ptr == NULL) {
 			continue;
 			//_task_block();
@@ -108,31 +90,22 @@ void serial_task(os_task_param_t task_init_data) {
 		printf("message: %c \n", msg_ptr->DATA[0]);
 		char c = msg_ptr->DATA[0];
 
-//		msg_ptr->HEADER.TARGET_QID = msg_ptr->HEADER.SOURCE_QID;
-//		msg_ptr->HEADER.SOURCE_QID = serial_qid;
-
-//		result = _msgq_send(msg_ptr);
-//
-//		if (result != TRUE) {
-//			printf("\nCould not send a message\n");
-//			//_task_block();
-//		}
-//		sprintf(buf, "\n\rType here: ");
+		// TODO Does this work?
+		// TODO How to make it so we can send more messages before it dies?
 		char buffer[1];
 		sprintf(buffer, "%c",c);
 		UART_DRV_SendDataBlocking(myUART_IDX, buffer, sizeof(buffer), 1000);
-//		UART_DRV_SendDataBlocking(myUART_IDX, buf, sizeof(buf), 1000);
 
-#ifdef PEX_USE_RTOS   
+#ifdef PEX_USE_RTOS
 	}
-#endif    
+#endif
 }
 
 /* END os_tasks */
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif 
+#endif
 
 /*!
  ** @}
