@@ -58,6 +58,8 @@ extern "C" {
 void serial_task(os_task_param_t task_init_data);
 typedef void   *_pool_id; // TODO is this supposed to be here?
 extern _pool_id message_pool;
+extern _queue_id serial_qid;
+extern int size_of_outline;
 
 #define SERIAL_QUEUE 8
 

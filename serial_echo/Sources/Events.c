@@ -67,10 +67,12 @@ void myUART_RxCallback(uint32_t instance, void * uartState) {
 	}
 
 	// TODO Should we set source?
+	// TA said dont bother with source
 	msg_ptr->HEADER.TARGET_QID = _msgq_get_id(0, SERIAL_QUEUE); // Set the target Queue ID based on queue number
 	msg_ptr->HEADER.SIZE = sizeof(MESSAGE_HEADER_STRUCT) + strlen((char *) msg_ptr->DATA) + 1; // TODO is this the right size?
 	msg_ptr->DATA[0] = myRxBuff[0];
 
+	// do we even handle the result?
 	result = _msgq_send(msg_ptr);
 
 	_msg_free(msg_ptr);
