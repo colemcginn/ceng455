@@ -9,7 +9,6 @@
 #include "Events.h"
 #include "rtos_main_task.h"
 #include "os_tasks.h"
-#include "constants.h"
 
 
 typedef struct open_permission{
@@ -19,14 +18,21 @@ typedef struct open_permission{
 
 extern open_permission read_permissions[10];
 extern int num_read;
-extern _queue_id write_permission;
+extern _task_id write_permission;
 extern MUTEX_STRUCT openR_mutex;
 extern MUTEX_STRUCT openW_mutex;
 
-bool OpenR(_task_id stream_no);
+extern int copy_count;
+extern int size_of_outline;
+
+extern char output_copy[];
+//extern char *output_copy; //="" ?
+//extern int copy_count;
+
+bool OpenR(_queue_id stream_no);
 bool _getline(char *string);
 _queue_id OpenW(void);
 bool _putline(_queue_id qid, char *string);
 bool Close(void);
 
-#endif 
+#endif

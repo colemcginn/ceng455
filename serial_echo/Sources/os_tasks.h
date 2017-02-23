@@ -41,6 +41,14 @@
 #include "MainTask.h"
 #include "SerialTask.h"
 #include "myUART.h"
+#include "ReadTask.h"
+#include "WriteTask.h"
+
+
+#include "Cpu.h"
+#include "Events.h"
+#include "rtos_main_task.h"
+#include "user_task_access_functions.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,17 +64,54 @@ extern "C" {
 ** ===================================================================
 */
 void serial_task(os_task_param_t task_init_data);
+void master_read_task(os_task_param_t task_init_data);
+void master_write_task(os_task_param_t task_init_data);
 typedef void   *_pool_id; // TODO is this supposed to be here?
 extern _pool_id message_pool;
+extern _pool_id task_message_pool;
 extern _queue_id serial_qid;
+extern _queue_id task_qid;
 extern int size_of_outline;
 
 #define SERIAL_QUEUE 8
 
 typedef struct serial_message {
 	MESSAGE_HEADER_STRUCT HEADER;
-	unsigned char DATA[1];
+	unsigned char DATA[32];
 } SERIAL_MESSAGE, *SERIAL_MESSAGE_PTR;
+
+/*
+** ===================================================================
+**     Callback    : write_task
+**     Description : Task function entry.
+**     Parameters  :
+**       task_init_data - OS task parameter
+**     Returns : Nothing
+** ===================================================================
+*/
+void write_task(os_task_param_t task_init_data);
+
+/*
+** ===================================================================
+**     Callback    : read_task
+**     Description : Task function entry.
+**     Parameters  :
+**       task_init_data - OS task parameter
+**     Returns : Nothing
+** ===================================================================
+*/
+void read_task(os_task_param_t task_init_data);
+
+/*
+** ===================================================================
+**     Callback    : read_task2
+**     Description : Task function entry.
+**     Parameters  :
+**       task_init_data - OS task parameter
+**     Returns : Nothing
+** ===================================================================
+*/
+void read_task2(os_task_param_t task_init_data);
 
 /* END os_tasks */
 
