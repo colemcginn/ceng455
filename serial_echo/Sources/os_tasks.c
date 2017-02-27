@@ -139,7 +139,7 @@ void serial_task(os_task_param_t task_init_data) {
 
 			case 23: //erase word
 				printf("erase word\n");
-				while(output_copy_local[copy_count_local] != ' '){
+				while(output_copy_local[copy_count_local] != ' ' && copy_count_local > 0){
 					printf("char: %c\n", output_copy_local[copy_count_local]);
 					UART_DRV_SendDataBlocking(myUART_IDX, "\b", sizeof(msg_ptr->DATA[0]), 1000);
 					UART_DRV_SendDataBlocking(myUART_IDX, " ", sizeof(msg_ptr->DATA[0]), 1000);
