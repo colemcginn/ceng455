@@ -1,4 +1,3 @@
-
 #include <mqx.h>
 #include <message.h>
 #include "Cpu.h"
@@ -22,52 +21,40 @@ bool OpenR(_queue_id stream_no){
 	}
 	//mutex
 	if (_mutex_lock(&openR_mutex) != MQX_OK) {
-	 // _task_block();
 		// failed mutex
 		return false;
 	}
+	//Add read permission to array
 	open_permission perm = {_task_get_id(), stream_no};
 	read_permissions[num_read] = perm;
+	//Increment count of tasks with read permission
 	num_read++;
 
 	_mutex_unlock(&openR_mutex);
 	return true;
 }
 bool _getline(char *string){
+	//checks for read permission
+	bool result = false;
+	for(int i=0;i<num_read;i++){
+		if(read_permissions[i].t_id == _task_get_id()){
+			//task has read permission
+			result = true;
+		}
+	}
+	if(!result){
+		// no read permission
+		return false;
+	}
+	//checks to see if there has been a returned line
 	if(output_copy[0]=='\0'){
 		return false;
 	}
+	//copies line to string
 	for(int i=0;i<copy_count;i++){
 		string[i] = output_copy[i];
 	}
 	return true;
-//
-////	printf("getline\n");
-//	SERIAL_MESSAGE_PTR msg_ptr;
-////	printf("serial task qid: %d\n",task_qid);
-//	msg_ptr = _msgq_receive(task_qid, 0);
-//	if (msg_ptr == NULL) {
-//		// continue;
-//		return false;
-//	}
-////	while(1) {
-////		if(msg_ptr!=NULL){
-////			break;
-////		}
-////		if(msg_ptr->DATA!=NULL){
-////			break;
-////		}
-////		//no message
-////		msg_ptr = _msgq_receive(task_qid, 0);
-//////		return false;
-////	}
-//	printf("data: %s\n",msg_ptr->DATA);
-//	for(int i=0;i<strlen(msg_ptr->DATA);i++){
-//		string[i] = msg_ptr->DATA[i];
-//	}
-//	//Check for permission
-//	return true;
-
 }
 _queue_id OpenW(void){
 	if(write_permission!=0){
@@ -79,14 +66,12 @@ _queue_id OpenW(void){
 		printf("failed mutex write\n");
 		return 0;
 	}
-
+	//give task write permission
 	write_permission = _task_get_id();
 
 	_mutex_unlock(&openW_mutex);
 
 	return serial_qid;
-
-
 }
 bool _putline(_queue_id qid, char *string){
 	//check permission
@@ -94,38 +79,11 @@ bool _putline(_queue_id qid, char *string){
 		// no write permission
 		return false;
 	}
-	printf("size %d %d\n",sizeof(string),copy_count);
+	//prints string to terminal
 	UART_DRV_SendDataBlocking(myUART_IDX, string, copy_count, 1000);
-	//append \n
-//	strcat(string,"\n");
-//
-//	//make message for entire string
-//	for(int j=0;j<num_read;j++){
-//
-//		for(int i=0;i<strlen(string);i++){
-//			SERIAL_MESSAGE_PTR msg_ptr;
-//
-//			// Allocate a message
-//			msg_ptr = (SERIAL_MESSAGE_PTR) _msg_alloc(task_message_pool);
-//
-//			if (msg_ptr == NULL) {
-//				_msg_free(msg_ptr);
-//				return false;
-//			}
-//
-//			msg_ptr->HEADER.TARGET_QID = read_permissions[j].q_id;//qid; // Set the target Queue ID based on queue number
-//			msg_ptr->HEADER.SIZE = sizeof(MESSAGE_HEADER_STRUCT) + strlen((char *) msg_ptr->DATA) + 1; // TODO is this the right size?
-//			msg_ptr->DATA[0] = string[i];
-//
-//			_msgq_send(msg_ptr);
-//
-//			_msg_free(msg_ptr);
-//		}
-//	}
 	return true;
-
-
 }
+
 bool Close(void){
 	bool had_permissions = false;
 	//check write and remove
@@ -147,8 +105,6 @@ bool Close(void){
 			break;
 		}
 	}
-
-
 	return had_permissions;
 }
 

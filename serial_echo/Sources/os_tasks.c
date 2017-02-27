@@ -65,21 +65,20 @@ int copy_count;
  */
 void serial_task(os_task_param_t task_init_data) {
 	printf("serialTask Created\n\r");
-	// not sure how to initialize for user tasks
+	//initalizing global variables
 	num_read = 0;
 	write_permission = 0;
 	_mutex_init(&openR_mutex,NULL);
 	_mutex_init(&openW_mutex,NULL);
-//	read_permissions
-
-
 	size_of_outline = 32;
 	char buf[size_of_outline];
-	output_copy[size_of_outline]; //="" ?
+	output_copy[size_of_outline]; 
 	output_copy[0] = '\0';
 	copy_count = 0;
+	//initializing local variables
+	//output_copy is used to keep a buffer of the characters typed in terminal
 	int copy_count_local = 0;
-	char output_copy_local[size_of_outline];// = output_copy;
+	char output_copy_local[size_of_outline];
 
 	sprintf(buf, "\n\rTYPE HERE: ");
 	UART_DRV_SendDataBlocking(myUART_IDX, buf, sizeof(buf), 1000);
@@ -89,6 +88,7 @@ void serial_task(os_task_param_t task_init_data) {
 	SERIAL_MESSAGE_PTR task_msg_ptr;
 	bool result;
 
+	//creating message queue and pool 
 	// Open a message queue.   _msgq_open(queue_num, max_size);
 	serial_qid = _msgq_open(SERIAL_QUEUE, 0);
 	printf("serial task qid: %d\n",serial_qid);
@@ -104,21 +104,6 @@ void serial_task(os_task_param_t task_init_data) {
 		_task_block();
 	}
 
-	task_qid = _msgq_open(9, 0);
-	printf("serial task qid: %d\n",task_qid);
-	if (task_qid == 0) {
-		printf("\nCould not open the system message queue\n");
-		_task_block();
-	}
-
-	// Create a message pool.   _msgpool_create(msg_size, num_msg, grow_size, grow_lim);
-	task_message_pool = _msgpool_create(sizeof(SERIAL_MESSAGE), 7, 0, 0);
-	if (task_message_pool == MSGPOOL_NULL_POOL_ID) {
-		printf("\nCount not create a message pool\n");
-		_task_block();
-	}
-
-//	_task_create(0,3,0);
 
 #ifdef PEX_USE_RTOS
 	while (1) {
@@ -131,17 +116,13 @@ void serial_task(os_task_param_t task_init_data) {
 			// continue;
 			_task_block();
 		}
-
-//		printf("message: %c \n", msg_ptr->DATA[0]);
-
+		//Reads data from message
 		int input_int = msg_ptr->DATA[0];
 		char c = msg_ptr->DATA[0];
-
-		// TODO Does this work?
-		// TODO How to make it so we can send more messages before it dies?
+		// copy message for printing in terminal
 		char buffer[1];
 		sprintf(buffer, "%c",c);
-//		printf("%d\n",input_int);
+
 		// ^H=8 ^W=23 ^U=21
 		// ^H:erase character, ^W: erase previous word, ^U: erase line
 		switch(input_int){
@@ -181,25 +162,7 @@ void serial_task(os_task_param_t task_init_data) {
 				}
 				break;
 			case 13: //enter is pressed
-				/*
-				// Allocate a message
-				task_msg_ptr = (SERIAL_MESSAGE_PTR) _msg_alloc(task_message_pool);
-				if (task_msg_ptr == NULL) {
-					_msg_free(msg_ptr);
-					return false;
-				}
-				task_msg_ptr->HEADER.TARGET_QID = task_qid;//qid; // Set the target Queue ID based on queue number
-//					msg_ptr->HEADER.SIZE = sizeof(MESSAGE_HEADER_STRUCT) + strlen((char *) msg_ptr->DATA) + 1; // TODO is this the right size?
-				task_msg_ptr->HEADER.SIZE = sizeof(SERIAL_MESSAGE);
-				for(int i=0;i<copy_count;i++){
-					task_msg_ptr->DATA[i] = output_copy_local[i];
-				}
-				printf("data: %s\n",task_msg_ptr->DATA);
-				printf("target: %d\n",task_msg_ptr->HEADER.TARGET_QID);
-				_msgq_send(task_msg_ptr);
-//				_msg_free(task_msg_ptr);
-				 */
-
+				//line is captured and copied to output_copy to be used by _getline()
 				UART_DRV_SendDataBlocking(myUART_IDX, "\n", sizeof(msg_ptr->DATA[0]), 1000);
 				copy_count = copy_count_local;
 				while(copy_count_local > 0){
@@ -211,7 +174,7 @@ void serial_task(os_task_param_t task_init_data) {
 				output_copy_local[copy_count_local] = '\0';
 				break;
 
-			case 20: //run task
+			case 20: //run task for testing
 				printf("new task\n");
 				_task_create(0,3,0);
 			default: //normal input
@@ -227,27 +190,39 @@ void serial_task(os_task_param_t task_init_data) {
 #endif
 }
 
-
+/*
+ ** ===================================================================
+ **     Callback    : read_task
+ **     Description : Task for testing access functions.
+ **     Parameters  :
+ **       task_init_data - OS task parameter
+ **     Returns : Nothing
+ ** ===================================================================
+ */
+ //Testing function that calls all access functions
 void read_task(os_task_param_t task_init_data){
 	printf("read task\n");
+	//Gets read permission
 	bool result = OpenR(_task_get_id());
 	printf("started read\n");
 	if(!result){
 		printf("failed to get read permission\n");
-//		Close();
 		_task_block();
 	}
 	char string1[size_of_outline];
 	result = false;
+	//Blocking get line
 	while(!result) result = _getline(string1);
 	printf("Got string %s\n",string1);
+	//Gets write permissions
 	_queue_id resultW = OpenW();
 	if(resultW == 0){
 		printf("failed to get write permission\n");
-//		Close();
 		_task_block();
 	}
+	//putline the return string from _getline()
 	_putline(resultW,string1);
+	//Close and revoke all permissions for task
 	bool close_result = Close();
 	if(close_result){
 		printf("All good, close worked\n");
@@ -255,74 +230,7 @@ void read_task(os_task_param_t task_init_data){
 		printf("Error, bad close\n");
 	}
 	_task_block();
-//	// Open a message queue.   _msgq_open(queue_num, max_size);
-//		serial_qid = _msgq_open(SERIAL_QUEUE, 0);
-//		printf("read task qid: %d\n",serial_qid);
-//		if (serial_qid == 0) {
-//			printf("\nCould not open the message queue\n");
-//			_task_block();
-//		}
-//
-//		// Create a message pool.   _msgpool_create(msg_size, num_msg, grow_size, grow_lim);
-//		message_pool = _msgpool_create(sizeof(SERIAL_MESSAGE), 7, 0, 0);
-//		if (message_pool == MSGPOOL_NULL_POOL_ID) {
-//			printf("\nCould not create a message pool\n");
-//			_task_block();
-//		}
-//
-//	bool result = OpenR(_task_get_id());
-//	printf("started read\n");
-//	if(!result){
-//		printf("failed to get read permission\n");
-//		return;
-//	}
-//	char string1[20];
-//
-//	while(1){
-//		result = _getline(string1);
-//
-//		if(!result){
-//			printf("failed to get line\n");
-//			break;
-//		}
-//		printf("Got string %s\n",string1);
-//		UART_DRV_SendDataBlocking(myUART_IDX, string1, sizeof(string1), 1000);
-//	}
-//
-//	printf("Got string %s\n",string1);
-//
-//	UART_DRV_SendDataBlocking(myUART_IDX, string1, sizeof(string1), 1000);
-//
-//	bool close_result = Close();
-//		if(close_result){
-//			printf("All good, close worked\n");
-//		} else{
-//			printf("Error, bad close\n");
-//		}
-//		return;
-
 }
-
-void write_task(os_task_param_t task_init_data){
-//	_queue_id result = OpenW();
-//	printf("started write\n");
-//	if(result == 0){
-//		printf("failed to get write permission\n");
-//		return;
-//	}
-//	char string1[size_of_outline];
-//	sprintf(string1, "%s","test");
-//	_putline(result,string1);
-//	bool close_result = Close();
-//	if(close_result){
-//		printf("All good, close worked\n");
-//	} else{
-//		printf("Error, bad close\n");
-//	}
-//	return;
-}
-
-
 
 
 /* END os_tasks */
